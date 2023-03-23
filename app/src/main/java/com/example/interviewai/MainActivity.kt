@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.video.Recorder
@@ -46,8 +48,9 @@ import java.util.Locale
 
 typealias LumaListener = (luma: Double) -> Unit
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var viewBinding: ActivityMainBinding
+    private var tts: TextToSpeech? = null
 
     private var imageCapture: ImageCapture? = null
 
@@ -68,7 +71,8 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
+            )
         }
 
         viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
@@ -81,30 +85,43 @@ class MainActivity : AppCompatActivity() {
         val interviewerMood = intent.getStringExtra("interviewerMood")
         val resumeInput = intent.getStringExtra("resume_input")
         //Set up openAI
+
+
         lifecycleScope.launch {
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId("gpt-3.5-turbo"),
             messages = listOf(
                 ChatMessage(
                     role = ChatRole.System,
-                    content = "You are currently an interviewer for a company and you are about to interview a potential" +
-                            " employee; These are the details the employee has given you to prep as an employer. $experiences." +
-                            "$jobOutlook" +". As for my desired salary range, I am looking for a range between $desiredSalaryRange per year, depending on the specifics of the role and the company." +
-                            "In terms of my ideal interviewer, I appreciate individuals who are $interviewerMood in their questioning and provide detailed feedback on my responses. " +
-                            "While I value kindness and respect, I also believe that constructive criticism is necessary for growth and development. " +
+                    content = "You are currently an interviewer for a company and you are about to interview a potential employee; These are the details the employee has given you to prep as an employer. Your only role here is to be the interviewer, and you will ask a question, then wait for my response as a user/interviewer, and the I will give a response and you will give me feedback based on the response I give you and then continue the interview"
+                ),
+                ChatMessage(
+                    role= ChatRole.User,
+                    content = "Hi! Nice to meet you, $experiences.\" +\n" +
+                            "$jobOutlook. As for my desired salary range, I am looking for a range between $desiredSalaryRange per year, depending on the specifics of the role and the company." +
+                            "In terms of my ideal interviewer, I appreciate individuals who are $interviewerMood in their questioning and provide detailed feedback on my responses." +
+                            ". While I value kindness and respect, I also believe that constructive criticism is necessary for growth and development"+
                             "I am open to various formats for the interview, including personal and technical surveys, as long as they are conducted in a professional and respectful manner." +
-                            "Please find below a summary of my experiences and skills: $resumeInput" +
-                            ".Conduct your interview with this interviewee, your only role here is to be the interviewer, and you will ask a question, then I will give a response and you will give " +
-                            "me feedback based on the response i give you and then continue the interview"
+                            "Please find below a summary of my experiences and skills: $resumeInput\" +\n" +
+                            ".Conduct your interview with this interviewee. Do not write all the conversation at once. I want you to only do the interview with me. Ask me the questions and wait for my answers. Do not write explanations. Ask me the questions one by one like an interviewer does and wait for my answers."
                 )
             )
         )
         val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
-            Log.d("C+", completion.toString())
-        }
-//// or, as flow
+        Log.d("toblerone", completion.choices[0].message?.content.toString())
+
+            speakAIResponse(completion.choices[0].message?.content.toString())
+
+      }
+// or, as flow
 //        val completions: Flow<ChatCompletionChunk> = openAI.chatCompletions(chatCompletionRequest)
+
+
         setContentView(viewBinding.root)
+        tts = TextToSpeech(this, this)
+//        val voice = Voice("en-us-x-sfg#male_2-local", Locale.US, Voice.QUALITY_VERY_HIGH, Voice.LATENCY_NORMAL, false, null)
+//        tts!!.setVoice(voice)
+
     }
 
     override fun onRequestPermissionsResult(
@@ -289,6 +306,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if(tts != null){
+
+        tts!!.shutdown()
+        tts!!.shutdown()
+        }
         cameraExecutor.shutdown()
     }
 
@@ -306,4 +328,27 @@ class MainActivity : AppCompatActivity() {
                 }
             }.toTypedArray()
     }
+
+    override fun onInit(status: Int) {
+        val result = tts!!.setLanguage(Locale.US)
+        if(status == TextToSpeech.SUCCESS){
+//            Log.d("VOICES", tts!!.voices.toString())
+        speakAIResponse("Hello, this is your interviewer")
+        }
+        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            Log.e("TTS","The Language not supported!")
+        }
+
+    }
+
+    private fun speakAIResponse(response: String){
+        if(tts != null){
+        tts!!.speak(response, TextToSpeech.QUEUE_FLUSH, null,"")
+        }else{
+            Log.d("es null", "its null")
+        }
+    }
+
+
+
 }
