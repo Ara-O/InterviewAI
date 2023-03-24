@@ -103,10 +103,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             ". While I value kindness and respect, I also believe that constructive criticism is necessary for growth and development"+
                             "I am open to various formats for the interview, including personal and technical surveys, as long as they are conducted in a professional and respectful manner." +
                             "Please find below a summary of my experiences and skills: $resumeInput\" +\n" +
-                            ".Conduct your interview with this interviewee. Do not write all the conversation at once. I want you to only do the interview with me. Ask me the questions and wait for my answers. Do not write explanations. Ask me the questions one by one like an interviewer does and wait for my answers."
+                            ".Conduct your interview with this interviewee. Do not write all the conversation at once. I want you to only do the interview with me. Ask me the questions and wait for my answers. Do not write explanations. Ask me the questions one by one like an interviewer does and wait for my answers. Start with an introduction"
                 )
             )
         )
+
         val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
         Log.d("toblerone", completion.choices[0].message?.content.toString())
 
