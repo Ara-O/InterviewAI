@@ -5,7 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import com.example.interviewai.databinding.ActivitySignupBinding
 
-class Signup : AppCompatActivity() {
+class IntroActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySignupBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,6 +16,7 @@ class Signup : AppCompatActivity() {
         binding.button.setOnClickListener {
             val i = Intent(this, InterviewPrep::class.java)
             startActivity(i)
+            overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
             finish()
         }
         setContentView(view)

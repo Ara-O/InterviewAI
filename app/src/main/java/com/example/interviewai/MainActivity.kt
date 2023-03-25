@@ -7,30 +7,19 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
-import android.speech.tts.Voice
+import android.util.Log
+import android.view.View.INVISIBLE
+import android.view.View.VISIBLE
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.interviewai.databinding.ActivityMainBinding
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import android.widget.Toast
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.core.Preview
-import androidx.camera.core.CameraSelector
-import android.util.Log
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.video.FallbackStrategy
-import androidx.camera.video.MediaStoreOutputOptions
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
-import androidx.camera.video.VideoRecordEvent
 import androidx.core.content.PermissionChecker
 import androidx.lifecycle.lifecycleScope
 import com.aallam.openai.api.BetaOpenAI
@@ -40,11 +29,12 @@ import com.aallam.openai.api.chat.ChatMessage
 import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.OpenAI
-import kotlinx.coroutines.GlobalScope
+import com.example.interviewai.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 typealias LumaListener = (luma: Double) -> Unit
 
@@ -84,10 +74,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val desiredSalaryRange = intent.getStringExtra("desired_salary_range")
         val interviewerMood = intent.getStringExtra("interviewerMood")
         val resumeInput = intent.getStringExtra("resume_input")
-        //Set up openAI
 
+
+        //Setting up openAI
 
         lifecycleScope.launch {
+        viewBinding.interviewerThinking.visibility = VISIBLE
+
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId("gpt-3.5-turbo"),
             messages = listOf(
@@ -108,21 +101,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
         )
 
-        val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
-        Log.d("toblerone", completion.choices[0].message?.content.toString())
+            viewBinding.interviewerThinking.visibility = INVISIBLE
 
-            speakAIResponse(completion.choices[0].message?.content.toString())
+            val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
+
+//            speakAIResponse(completion.choices[0].message?.content.toString())
+
 
       }
 // or, as flow
 //        val completions: Flow<ChatCompletionChunk> = openAI.chatCompletions(chatCompletionRequest)
-
+        tts = TextToSpeech(this, this)
 
         setContentView(viewBinding.root)
-        tts = TextToSpeech(this, this)
-//        val voice = Voice("en-us-x-sfg#male_2-local", Locale.US, Voice.QUALITY_VERY_HIGH, Voice.LATENCY_NORMAL, false, null)
-//        tts!!.setVoice(voice)
-
     }
 
     override fun onRequestPermissionsResult(
@@ -226,8 +217,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 when(recordEvent) {
                     is VideoRecordEvent.Start -> {
                         viewBinding.videoCaptureButton.apply {
-                            text = "Stop Capture"
+//                            text = "Stop Capture"
                             isEnabled = true
+                            Toast.makeText(context, "Recording has started", Toast.LENGTH_SHORT).show()
                         }
                     }
                     is VideoRecordEvent.Finalize -> {
@@ -244,8 +236,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                                     "${recordEvent.error}")
                         }
                         viewBinding.videoCaptureButton.apply {
-                            text = "Start Capture"
+//                            text = "Start Capture"
                             isEnabled = true
+                            Toast.makeText(context, "Recording has stopped", Toast.LENGTH_SHORT).show()
+
                         }
                     }
                 }
@@ -331,25 +325,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(status: Int) {
-        val result = tts!!.setLanguage(Locale.US)
-        if(status == TextToSpeech.SUCCESS){
-//            Log.d("VOICES", tts!!.voices.toString())
-        speakAIResponse("Hello, this is your interviewer")
-        }
-        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-            Log.e("TTS","The Language not supported!")
-        }
+        if (status == TextToSpeech.SUCCESS) {
+            val result = tts!!.setLanguage(Locale.US)
 
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.d("TTS","The Language not supported!")
+            } else {
+                Log.d("TTS","The Language is supported!")
+            }
+        }
     }
 
     private fun speakAIResponse(response: String){
-        if(tts != null){
-        tts!!.speak(response, TextToSpeech.QUEUE_FLUSH, null,"")
-        }else{
-            Log.d("es null", "its null")
-        }
+        Log.d("speak", "Speak AI response")
+        tts!!.speak("Ill get those punks what for", TextToSpeech.QUEUE_FLUSH, null, "")
     }
-
-
 
 }

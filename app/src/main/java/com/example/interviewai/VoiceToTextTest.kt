@@ -3,10 +3,8 @@ package com.example.interviewai
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.media.MediaRecorder
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -33,7 +31,7 @@ class VoiceToTextTest : AppCompatActivity() {
     private var output: String? = null
     private var mediaRecorder: MediaRecorder? = null
     private var state: Boolean = false
-    private lateinit var mediaFile: File
+    private var mediaFile: File? = null
     private var recordingStopped: Boolean = false
     @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(BetaOpenAI::class)
@@ -64,35 +62,40 @@ class VoiceToTextTest : AppCompatActivity() {
 //        output = Environment.getExternalStorageDirectory().absolutePath + "/Android/data/thisisarecording.mp3"
 //        getExternalFilesDir("")
 //        output = File(filesDir, "user-file-recording")
-        Log.d("UTPUT", output.toString())
-        if (Build.VERSION.SDK_INT >= 31) {
-            Log.d("VERSION", "greater than 31")
-            mediaRecorder = MediaRecorder(this)
-        }else{
-            Log.d("VERSION", "less than 31")
-            mediaRecorder = MediaRecorder()
-        }
+
 
         setContentView(binding.root)
 
     }
     private fun startRecording() {
         try {
+            Log.d("UTPUT", output.toString())
+            if (Build.VERSION.SDK_INT >= 31) {
+                Log.d("VERSION", "greater than 31")
+                mediaRecorder = MediaRecorder(this)
+            }else{
+                Log.d("VERSION", "less than 31")
+                mediaRecorder = MediaRecorder()
+            }
+
             mediaRecorder!!.setAudioSource(MediaRecorder.AudioSource.MIC)
             mediaRecorder!!.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             mediaRecorder!!.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
 
-            val mediaStorageDir = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "MyApp")
-            if (!mediaStorageDir.exists()) {
-                if (!mediaStorageDir.mkdirs()) {
-                    Log.d("MyApp", "failed to create directory")
-                }
-            }
+            val internalStorageDir = filesDir
+
+
+//            val mediaStorageDir = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "MyApp")
+//            if (!mediaStorageDir.exists()) {
+//                if (!mediaStorageDir.mkdirs()) {
+//                    Log.d("MyApp", "failed to create directory")
+//                }
+//            }
 
             val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+//            mediaFile =   File(mediaStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
             mediaFile =
-                File(mediaStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
-
+                File(internalStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
             val fileOutputStream = FileOutputStream(mediaFile)
             mediaRecorder!!.setOutputFile(fileOutputStream.fd)
 
@@ -133,7 +136,7 @@ class VoiceToTextTest : AppCompatActivity() {
 //            Uri.parse(Environment.getExternalStorageDirectory().absolutePath + "/Android/data/thisisarecording.mp3")
 
         val request = TranscriptionRequest(
-            audio = FileSource(mediaFile.absolutePath.toPath(), fileSystem = FileSystem.SYSTEM),
+            audio = FileSource(mediaFile?.absolutePath?.toPath()!!, fileSystem = FileSystem.SYSTEM),
             model = ModelId("whisper-1"),
         )
 

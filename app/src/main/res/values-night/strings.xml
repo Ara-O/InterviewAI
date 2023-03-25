@@ -1,5 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">InterviewAI</string>
     <string name="welcome_to_interviewai">Welcome to InterviewAI!</string>
     <string name="ready_to_succeed_text">Are you ready to ace your next job interview? InterviewAI is here to help you prepare and succeed in interviews.</string>
     <string name="go_to_interview_prep">Go to interview prep</string>
