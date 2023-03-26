@@ -26,15 +26,19 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import androidx.lifecycle.lifecycleScope
 import com.aallam.openai.api.BetaOpenAI
+import com.aallam.openai.api.audio.TranscriptionRequest
 import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage
 import com.aallam.openai.api.chat.ChatRole
+import com.aallam.openai.api.file.FileSource
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.Chat
 import com.aallam.openai.client.OpenAI
 import com.example.interviewai.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import okio.FileSystem
+import okio.Path.Companion.toPath
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -109,7 +113,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     mediaRecorder?.release()
                     state = false
                     Toast.makeText(this, "Recording stopped!", Toast.LENGTH_SHORT).show()
-
+                    //Convert recording to text
+                    lifecycleScope.launch{
+                        convertSpeechToText()
+                    }
                 }else{
 
                     if (Build.VERSION.SDK_INT >= 31) {
@@ -161,6 +168,24 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(viewBinding.root)
     }
 
+
+    @OptIn(BetaOpenAI::class)
+    private suspend fun convertSpeechToText() {
+        val openAI = OpenAI(BuildConfig.API_KEY)
+
+        val request = TranscriptionRequest(
+            audio = FileSource(mediaFile?.absolutePath?.toPath()!!, fileSystem = FileSystem.SYSTEM),
+            model = ModelId("whisper-1"),
+        )
+
+        val transcription = openAI.transcription(request)
+
+        Log.d("AUDIO FILE HERe", transcription.text)
+
+        runOnUiThread{
+            viewBinding.interviewHistoryText.append("You:\n${transcription.text}")
+        }
+    }
 
 
     override fun onDestroy() {
@@ -235,6 +260,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
             val interviewersResponse = completion.choices[0].message?.content.toString()
 
+            runOnUiThread {
+                viewBinding.interviewHistoryText.append("Interviewer:\n$interviewersResponse\n\n")
+            }
             speakAIResponse(interviewersResponse)
 
             //Add interviewers response
