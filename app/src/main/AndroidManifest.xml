@@ -21,6 +21,7 @@
     </queries>
 
     <application
+        android:windowSoftInputMode="stateUnchanged|adjustNothing"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -53,6 +54,7 @@
         </activity>
         <activity
             android:name=".MainActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="false" />
 
         <meta-data

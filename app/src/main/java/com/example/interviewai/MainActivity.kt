@@ -1,6 +1,7 @@
 package com.example.interviewai
 
 import android.Manifest
+import android.content.ClipData.Item
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
@@ -9,6 +10,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
@@ -25,6 +27,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.aallam.openai.api.BetaOpenAI
 import com.aallam.openai.api.audio.TranscriptionRequest
 import com.aallam.openai.api.chat.ChatCompletion
@@ -61,6 +64,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 //    private var recording: Recording? = null
     @OptIn(BetaOpenAI::class)
     private var chatHistory = mutableListOf<ChatMessage>()
+    @OptIn(BetaOpenAI::class)
+    private var recyclerViewChatHistory = mutableListOf<ChatMessage>()
     private lateinit var cameraExecutor: ExecutorService
 
     @OptIn(BetaOpenAI::class)
@@ -69,20 +74,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
 
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            val permissions = arrayOf(android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE)
-            ActivityCompat.requestPermissions(this, permissions,0)
-            Log.d("PERMS", "Permissions not granted")
-        }
-
+//        if (ContextCompat.checkSelfPermission(this,
+//                android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this,
+//                android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//            val permissions = arrayOf(android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+//            ActivityCompat.requestPermissions(this, permissions,0)
+//            Log.d("PERMS", "Permissions not granted")
+//        }
+//
         val experiences = intent.getStringExtra("experiences")
         val jobOutlook = intent.getStringExtra("job_outlook")
         val desiredSalaryRange = intent.getStringExtra("desired_salary_range")
         val interviewerMood = intent.getStringExtra("interviewerMood")
         val resumeInput = intent.getStringExtra("resume_input")
-
 
         chatHistory.add(ChatMessage(
             role = ChatRole.System,
@@ -101,69 +105,78 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         )
         )
 
-
-        tts = TextToSpeech(this, this)
-
-
-        viewBinding.audioCaptureButton.setOnClickListener {
-            try {
-                if(state){
-                    Log.d("cellphone", "onCreate: Should BE STOPPING")
-                    mediaRecorder?.stop()
-                    mediaRecorder?.release()
-                    state = false
-                    Toast.makeText(this, "Recording stopped!", Toast.LENGTH_SHORT).show()
-                    //Convert recording to text
-                    lifecycleScope.launch{
-                        convertSpeechToText()
-                    }
-                }else{
-
-                    if (Build.VERSION.SDK_INT >= 31) {
-                        Log.d("VERSION", "greater than 31")
-                        mediaRecorder = MediaRecorder(this)
-                    } else {
-                        Log.d("VERSION", "less than 31")
-                        mediaRecorder = MediaRecorder()
-                    }
-                    Log.d("cellphone", "onCreate: Should BE STARTIG")
-                mediaRecorder!!.setAudioSource(MediaRecorder.AudioSource.MIC)
-                mediaRecorder!!.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                mediaRecorder!!.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-
-                val internalStorageDir = filesDir
-                val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-//            mediaFile =   File(mediaStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
-                mediaFile =
-                    File(internalStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
-                val fileOutputStream = FileOutputStream(mediaFile)
-                mediaRecorder!!.setOutputFile(fileOutputStream.fd)
-
-                mediaRecorder!!.prepare()
-                mediaRecorder!!.start()
-
-                state = true
-                Toast.makeText(this, "Recording started!", Toast.LENGTH_SHORT).show()
-                }
-            }catch (e: IllegalStateException) {
-                e.printStackTrace()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-        // Request camera permissions
-//        if (allPermissionsGranted()) {
-//            startCamera()
-//        } else {
-//            ActivityCompat.requestPermissions(
-//                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
-//            )
+//
+//        tts = TextToSpeech(this, this)
+//
+//
+//        viewBinding.audioCaptureButton.setOnClickListener {
+//            try {
+//                if(state){
+//                    Log.d("cellphone", "onCreate: Should BE STOPPING")
+//                    mediaRecorder?.stop()
+//                    mediaRecorder?.release()
+//                    state = false
+//                    Toast.makeText(this, "Recording stopped!", Toast.LENGTH_SHORT).show()
+//                    //Convert recording to text
+//                    lifecycleScope.launch{
+//                        convertSpeechToText()
+//                    }
+//                }else{
+//
+//                    if (Build.VERSION.SDK_INT >= 31) {
+//                        Log.d("VERSION", "greater than 31")
+//                        mediaRecorder = MediaRecorder(this)
+//                    } else {
+//                        Log.d("VERSION", "less than 31")
+//                        mediaRecorder = MediaRecorder()
+//                    }
+//                    Log.d("cellphone", "onCreate: Should BE STARTIG")
+//                mediaRecorder!!.setAudioSource(MediaRecorder.AudioSource.MIC)
+//                mediaRecorder!!.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+//                mediaRecorder!!.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+//
+//                val internalStorageDir = filesDir
+//                val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+////            mediaFile =   File(mediaStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
+//                mediaFile =
+//                    File(internalStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
+//                val fileOutputStream = FileOutputStream(mediaFile)
+//                mediaRecorder!!.setOutputFile(fileOutputStream.fd)
+//
+//                mediaRecorder!!.prepare()
+//                mediaRecorder!!.start()
+//
+//                state = true
+//                Toast.makeText(this, "Recording started!", Toast.LENGTH_SHORT).show()
+//                }
+//            }catch (e: IllegalStateException) {
+//                e.printStackTrace()
+//            } catch (e: IOException) {
+//                e.printStackTrace()
+//            }
 //        }
 
-//        viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
 
-//        cameraExecutor = Executors.newSingleThreadExecutor()
+        val recyclerView = viewBinding.recyclerView
+        recyclerView.adapter = ItemAdapter(this, recyclerViewChatHistory)
 
+
+
+        ItemAdapter(this, recyclerViewChatHistory).addItem(ChatMessage(
+            role = ChatRole.Assistant,
+            content = "Welcome! Your interview will start shortly with the interviewer " +
+                    " asking a question, once the question has been given, you can click the " +
+                    "microphone icon to give your response, and once you are done, you can click the microphone icon again to stop talking" +
+                    ". The interviewer will look at your response and after a short while, a response will be given. Good luck!"
+        ), chatHistory.size)
+
+
+        ItemAdapter(this, recyclerViewChatHistory).addItem(ChatMessage(
+            role = ChatRole.User,
+            content = "Remember me!"
+        ), chatHistory.size)
+
+        recyclerView.setHasFixedSize(true)
 
         setContentView(viewBinding.root)
     }
@@ -179,13 +192,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         )
 
         val transcription = openAI.transcription(request)
+        chatHistory.add(ChatMessage(
+            role = ChatRole.User,
+            content =  transcription.text
+        ))
+
 
         Log.d("AUDIO FILE HERe", transcription.text)
 
         runOnUiThread{
-            viewBinding.interviewHistoryText.append("You:\n${transcription.text}")
+//            viewBinding.interviewHistoryText.append("You:\n${transcription.text}\n\n")
         }
+
+        startInterview()
     }
+
 
 
     override fun onDestroy() {
@@ -219,7 +240,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
                     override fun onDone(utteranceId: String) {
                         runOnUiThread{
-                            viewBinding.audioCaptureButton.isEnabled = true
+//                            viewBinding.audioCaptureButton.isEnabled = true
+//                            viewBinding.interviewerThinking.setText("Interviewer is listening")
                         }
                         if(utteranceId == "welcomeText"){
                             startInterview()
@@ -247,7 +269,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun startInterview() {
         val openAI = OpenAI(BuildConfig.API_KEY)
         runOnUiThread {
-            viewBinding.interviewerThinking.visibility = VISIBLE
+//            viewBinding.interviewerThinking.visibility = VISIBLE
 
         }
 
@@ -261,7 +283,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val interviewersResponse = completion.choices[0].message?.content.toString()
 
             runOnUiThread {
-                viewBinding.interviewHistoryText.append("Interviewer:\n$interviewersResponse\n\n")
+//                viewBinding.interviewHistoryText.append("Interviewer:\n$interviewersResponse\n\n")
             }
             speakAIResponse(interviewersResponse)
 
@@ -271,15 +293,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 content = interviewersResponse
             ))
 
-            runOnUiThread {
-                viewBinding.interviewerThinking.visibility = INVISIBLE
-            }
         }
     }
 
+    @OptIn(BetaOpenAI::class)
     private fun speakAIResponse(response: String){
         Log.d("speak", "Speak AI response")
-        viewBinding.interviewerThinking.setText("Interviewer is Talking")
+        val recyclerView = viewBinding.recyclerView
+        recyclerView.adapter = ItemAdapter(this, chatHistory)
+        recyclerView.setHasFixedSize(true)
+
+//        viewBinding.interviewerThinking.setText("Interviewer is Talking")
         tts!!.speak(response, TextToSpeech.QUEUE_FLUSH, null, "")
     }
 
