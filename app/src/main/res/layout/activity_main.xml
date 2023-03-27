@@ -98,6 +98,7 @@
         android:id="@+id/scrollView2"
         android:layout_width="360dp"
         android:layout_height="690dp"
+        android:nestedScrollingEnabled="false"
         android:layout_marginTop="20dp"
         android:background="@drawable/interview_history_background"
         android:paddingTop="15dp"
@@ -109,13 +110,13 @@
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
+            android:nestedScrollingEnabled="true"
             android:scrollbars="vertical"
             app:layoutManager="LinearLayoutManager" />
     </ScrollView>
 
     <EditText
-        android:id="@+id/editTextTextPersonName"
+        android:id="@+id/userResponseText"
         android:layout_width="262dp"
         android:layout_height="43dp"
         android:layout_marginStart="28dp"
@@ -133,13 +134,13 @@
         app:layout_constraintTop_toBottomOf="@+id/scrollView2" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/button2"
+        android:id="@+id/sendResponseButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:layout_marginTop="16dp"
         android:text="Send"
-        app:layout_constraintStart_toEndOf="@+id/editTextTextPersonName"
+        app:layout_constraintStart_toEndOf="@+id/userResponseText"
         app:layout_constraintTop_toBottomOf="@+id/scrollView2" />
 
     <Button

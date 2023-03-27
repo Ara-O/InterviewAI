@@ -1,8 +1,10 @@
 package com.example.interviewai
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ClipData.Item
 import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
@@ -39,7 +41,10 @@ import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.Chat
 import com.aallam.openai.client.OpenAI
 import com.example.interviewai.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import java.io.File
@@ -67,12 +72,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @OptIn(BetaOpenAI::class)
     private var recyclerViewChatHistory = mutableListOf<ChatMessage>()
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var itemAdapter: ItemAdapter
 
+    @SuppressLint("NotifyDataSetChanged")
     @OptIn(BetaOpenAI::class)
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
+
+        itemAdapter = ItemAdapter(applicationContext, recyclerViewChatHistory)
 
 //        if (ContextCompat.checkSelfPermission(this,
 //                android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this,
@@ -158,26 +167,38 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
 
         val recyclerView = viewBinding.recyclerView
-        recyclerView.adapter = ItemAdapter(this, recyclerViewChatHistory)
+        recyclerView.adapter =itemAdapter
 
-
-
-        ItemAdapter(this, recyclerViewChatHistory).addItem(ChatMessage(
+        recyclerViewChatHistory.add(ChatMessage(
             role = ChatRole.Assistant,
             content = "Welcome! Your interview will start shortly with the interviewer " +
                     " asking a question, once the question has been given, you can click the " +
                     "microphone icon to give your response, and once you are done, you can click the microphone icon again to stop talking" +
                     ". The interviewer will look at your response and after a short while, a response will be given. Good luck!"
-        ), chatHistory.size)
+        ))
 
+        itemAdapter.notifyDataSetChanged()
 
-        ItemAdapter(this, recyclerViewChatHistory).addItem(ChatMessage(
-            role = ChatRole.User,
-            content = "Remember me!"
-        ), chatHistory.size)
+        startInterview()
 
         recyclerView.setHasFixedSize(true)
 
+
+        //Handle user text
+        viewBinding.sendResponseButton.setOnClickListener {
+            var usersResponse = ChatMessage(
+                role = ChatRole.User,
+                content =  viewBinding.userResponseText.text.toString()
+            )
+            viewBinding.userResponseText.text.clear()
+
+            chatHistory.add(usersResponse)
+            recyclerViewChatHistory.add(usersResponse)
+            itemAdapter.notifyDataSetChanged()
+            startInterview()
+        }
+
+        recyclerView.itemAnimator = FadeInItemAnimator()
         setContentView(viewBinding.root)
     }
 
@@ -268,33 +289,31 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @OptIn(BetaOpenAI::class)
     private fun startInterview() {
         val openAI = OpenAI(BuildConfig.API_KEY)
-        runOnUiThread {
-//            viewBinding.interviewerThinking.visibility = VISIBLE
-
-        }
 
         lifecycleScope.launch {
+        var interviewersResponse = ""
             val chatCompletionRequest = ChatCompletionRequest(
                 model = ModelId("gpt-3.5-turbo"),
                 messages = chatHistory
             )
 
             val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
-            val interviewersResponse = completion.choices[0].message?.content.toString()
+            interviewersResponse = completion.choices[0].message?.content.toString()
 
-            runOnUiThread {
-//                viewBinding.interviewHistoryText.append("Interviewer:\n$interviewersResponse\n\n")
-            }
-            speakAIResponse(interviewersResponse)
-
-            //Add interviewers response
             chatHistory.add(ChatMessage(
                 role = ChatRole.Assistant,
                 content = interviewersResponse
             ))
+            recyclerViewChatHistory.add(ChatMessage(
+                role = ChatRole.Assistant,
+                content = interviewersResponse
+            ))
+            itemAdapter.notifyDataSetChanged()
+//            speakAIResponse(interviewersResponse)
+        }
+
 
         }
-    }
 
     @OptIn(BetaOpenAI::class)
     private fun speakAIResponse(response: String){
