@@ -10,15 +10,18 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.widget.Toast
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.aallam.openai.api.BetaOpenAI
 import com.aallam.openai.api.audio.TranscriptionRequest
+import com.aallam.openai.api.chat.ChatCompletion
+import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ChatMessage
 import com.aallam.openai.api.chat.ChatRole
 import com.aallam.openai.api.file.FileSource
@@ -46,27 +49,67 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
 
+    @OptIn(BetaOpenAI::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityAudioInterviewBinding.inflate(layoutInflater)
 
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            val permissions = arrayOf(android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.WRITE_EXTERNAL_STORAGE, android.Manifest.permission.READ_EXTERNAL_STORAGE)
-            ActivityCompat.requestPermissions(this, permissions,0)
-            Log.d("PERMS", "Permissions not granted")
+        // Request camera permissions
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            Toast.makeText(this, "You may have to go back and enter the call again to access the camera", Toast.LENGTH_SHORT).show()
+            ActivityCompat.requestPermissions(
+                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
+            )
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.RECORD_AUDIO
+                ) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                val permissions = arrayOf(
+                    android.Manifest.permission.RECORD_AUDIO,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE
+                )
+                ActivityCompat.requestPermissions(this, permissions, 0)
+                Log.d("PERMS", "Permissions not granted")
+            }
         }
 
         //Setting up text to speech
         tts = TextToSpeech(this, this)
 
-
         viewBinding.audioCaptureButton.setOnClickListener {
             recordUserAudio()
         }
 
-        startInterview()
+        val experiences = intent.getStringExtra("experiences")
+        val jobOutlook = intent.getStringExtra("job_outlook")
+        val desiredSalaryRange = intent.getStringExtra("desired_salary_range")
+        val interviewerMood = intent.getStringExtra("interviewerMood")
+        val resumeInput = intent.getStringExtra("resume_input")
+
+        chatHistory.add(ChatMessage(
+            role = ChatRole.System,
+            content = "You are currently an interviewer for a company and you are about to interview a potential employee; These are the details the employee has given you to prep as an employer. Your only role here is to be the interviewer, and you will ask a question, then wait for my response as a user/interviewer, and the I will give a response and you will give me feedback based on the response I give you and then continue the interview"
+        ))
+
+        chatHistory.add(ChatMessage(
+            role= ChatRole.User,
+            content = "Hi! Nice to meet you, $experiences.\" +\n" +
+                    "$jobOutlook. As for my desired salary range, I am looking for a range between $desiredSalaryRange per year, depending on the specifics of the role and the company." +
+                    "In terms of my ideal interviewer, I appreciate individuals who are $interviewerMood in their questioning and provide detailed feedback on my responses." +
+                    ". While I value kindness and respect, I also believe that constructive criticism is necessary for growth and development"+
+                    "I am open to various formats for the interview, including personal and technical surveys, as long as they are conducted in a professional and respectful manner." +
+                    "Please find below a summary of my experiences and skills: $resumeInput\" +\n" +
+                    ".Conduct your interview with this interviewee. Do not write all the conversation at once. I want you to only do the interview with me. Ask me the questions and wait for my answers. Do not write explanations. Ask me the questions one by one like an interviewer does and wait for my answers. Start with an introduction"
+            )
+        )
+
         setContentView(viewBinding.root)
     }
 
@@ -116,9 +159,76 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         }
     }
 
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        cameraProviderFuture.addListener({
+            // Used to bind the lifecycle of cameras to the lifecycle owner
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            // Preview
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
+                }
+
+            val recorder = Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                .build()
+            videoCapture = VideoCapture.withOutput(recorder)
+
+            /*
+            imageCapture = ImageCapture.Builder().build()
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
+                        Log.d(TAG, "Average luminosity: $luma")
+                    })
+                }
+            */
+
+            // Select back camera as a default
+            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
 
-    @OptIn(BetaOpenAI::class)
+        try {
+            // Unbind use cases before rebinding
+            cameraProvider.unbindAll()
+
+            // Bind use cases to camera
+            cameraProvider
+                .bindToLifecycle(this, cameraSelector, preview, videoCapture)
+        } catch(exc: Exception) {
+            Log.e("Failed", "Use case binding failed", exc)
+        }
+
+    }, ContextCompat.getMainExecutor(this))
+}
+
+    companion object {
+        private const val TAG = "CameraXApp"
+        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf (
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO
+            ).apply {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
+    }
+private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+    ContextCompat.checkSelfPermission(
+        baseContext, it) == PackageManager.PERMISSION_GRANTED
+}
+
+
+
+@OptIn(BetaOpenAI::class)
     private suspend fun convertSpeechToText() {
         val openAI = OpenAI(BuildConfig.API_KEY)
 
@@ -138,13 +248,35 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         Log.d("AUDIO FILE HERe", transcription.text)
 
         runOnUiThread{
-//           viewBinding.interviewHistoryText.append("You:\n${transcription.text}\n\n")
+           viewBinding.interviewHistoryText.append("You:\n${transcription.text}\n\n")
         }
 
         startInterview()
     }
 
+    @OptIn(BetaOpenAI::class)
     private fun startInterview() {
+        val openAI = OpenAI(BuildConfig.API_KEY)
+
+        lifecycleScope.launch {
+            var interviewersResponse = ""
+            val chatCompletionRequest = ChatCompletionRequest(
+                model = ModelId("gpt-3.5-turbo"),
+                messages = chatHistory
+            )
+
+            val completion: ChatCompletion = openAI.chatCompletion(chatCompletionRequest)
+            interviewersResponse = completion.choices[0].message?.content.toString()
+
+            chatHistory.add(
+                ChatMessage(
+                    role = ChatRole.Assistant,
+                    content = interviewersResponse
+                )
+            )
+//
+            speakAIResponse(interviewersResponse)
+        }
     }
 
 
@@ -153,7 +285,7 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
         if(tts != null){
             tts!!.shutdown()
         }
-//        cameraExecutor.shutdown()
+//       cameraExecutor.shutdown()
     }
 
 
@@ -179,10 +311,11 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
 
                     override fun onDone(utteranceId: String) {
                         runOnUiThread{
-//                            viewBinding.audioCaptureButton.isEnabled = true
-//                            viewBinding.interviewerThinking.setText("Interviewer is listening")
+                            viewBinding.audioCaptureButton.isEnabled = true
+                            viewBinding.interviewerThinking.setText("Interviewer is listening")
                         }
                         if(utteranceId == "welcomeText"){
+                            Log.d("TAG","Start interview is done")
                             startInterview()
                         }
                     }
@@ -193,7 +326,7 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
                     }
                 });
 
-//                When TextToSpeech has processed, start functionality
+//              When TextToSpeech has processed, start functionality
                 val welcomeText =  "\"Welcome! Your interview will start shortly with the interviewer " +
                         " asking a question, once the question has been given, you can click the " +
                         "microphone icon to give your response, and once you are done, you can click the microphone icon again to stop talking" +
@@ -208,6 +341,9 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
     private fun speakAIResponse(response: String){
         Log.d("speak", "Speak AI response")
         viewBinding.interviewerThinking.setText("Interviewer is Talking")
+        runOnUiThread {
+            viewBinding.interviewHistoryText.append("Interviewer:\n$response\n\n")
+        }
         tts!!.speak(response, TextToSpeech.QUEUE_FLUSH, null, "")
     }
 

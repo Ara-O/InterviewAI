@@ -112,8 +112,8 @@ class MainActivity : AppCompatActivity(){
         recyclerViewChatHistory.add(ChatMessage(
             role = ChatRole.Assistant,
             content = "Welcome! Your interview will start shortly with the interviewer " +
-                    " asking a question, once the question has been given, you can click the " +
-                    "microphone icon to give your response, and once you are done, you can click the microphone icon again to stop talking" +
+                    " asking a question, once the question has been given, you can write your answer in the text space below." +
+                    "Once you are done, you can click the send icon to get a response" +
                     ". The interviewer will look at your response and after a short while, a response will be given. Good luck!"
         ))
 

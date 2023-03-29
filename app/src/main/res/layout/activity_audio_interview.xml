@@ -10,8 +10,8 @@
 
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
-        android:layout_width="368dp"
-        android:layout_height="689dp"
+        android:layout_width="362dp"
+        android:layout_height="413dp"
         android:layout_marginTop="60dp"
         android:background="@drawable/rounded_camera"
         app:layout_constraintEnd_toEndOf="parent"
@@ -26,7 +26,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="18dp"
         android:fontFamily="@font/poppins"
-        android:text="Interviewer is Thinking..."
+        android:text="Interviewer is Talking..."
         android:textColor="@color/white"
         android:textSize="12sp"
         android:visibility="visible"
@@ -41,19 +41,50 @@
         android:id="@+id/audio_capture_button"
         android:layout_width="130dp"
         android:layout_height="130dp"
-        android:layout_marginTop="628dp"
+        android:layout_marginTop="356dp"
         android:background="@drawable/microphone_background_rounded"
         android:elevation="2dp"
         android:fontFamily="@font/poppins_semibold"
         android:padding="20dp"
         android:scaleType="fitCenter"
         android:src="@mipmap/microphone_image_foreground"
-        android:text="Start Capture"
         android:textColor="#FFFFFF"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.483"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/viewFinder" />
+
+    <ScrollView
+        android:layout_width="wrap_content"
+        android:layout_height="247dp"
+        android:layout_marginTop="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView13">
+
+        <TextView
+            android:id="@+id/interviewHistoryText"
+            android:layout_width="347dp"
+            android:layout_height="247dp"
+            android:fontFamily="@font/poppins_light"
+            android:gravity="top|center"
+            android:scrollbars="vertical"
+            android:text=""
+            android:textColor="#FFFFFF" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/textView13"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="13dp"
+        android:text="@string/interview_history"
+        android:textColor="@color/white"
+        android:fontFamily="@font/poppins_light"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/audio_capture_button" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
