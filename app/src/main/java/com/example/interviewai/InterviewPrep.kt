@@ -1,11 +1,9 @@
 package com.example.interviewai
 
 import android.content.Intent
-import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Typeface
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import com.example.interviewai.databinding.ActivityInterviewPrepBinding
 import java.util.*
 
@@ -20,18 +18,27 @@ class InterviewPrep : AppCompatActivity(){
         var interviewerMood = ""
         binding.criticalButton.setOnClickListener {
             interviewerMood = "Critical"
-            binding.criticalButton.setBackgroundColor(Color.DKGRAY)
+            binding.criticalButton.setTextColor( getResources().getColor(R.color.purple_theme_color, theme))
+            binding.niceButton.setTextColor( getResources().getColor(R.color.white, theme))
+            binding.specificButton.setTextColor( getResources().getColor(R.color.white, theme))
+
         }
 
         binding.niceButton.setOnClickListener {
             interviewerMood = "Nice"
-            binding.niceButton.setBackgroundColor(Color.DKGRAY)
+//            binding.niceButton.ba (getResources().getColor(R.color.teal_200, theme))
+            binding.criticalButton.setTextColor( getResources().getColor(R.color.white, theme))
+            binding.niceButton.setTextColor( getResources().getColor(R.color.purple_theme_color, theme))
+            binding.specificButton.setTextColor( getResources().getColor(R.color.white, theme))
 
         }
 
          binding.specificButton.setOnClickListener {
             interviewerMood = "Specific"
-             binding.specificButton.setBackgroundColor(Color.DKGRAY)
+             binding.criticalButton.setTextColor( getResources().getColor(R.color.white, theme))
+             binding.niceButton.setTextColor( getResources().getColor(R.color.white, theme))
+             binding.specificButton.setTextColor( getResources().getColor(R.color.purple_theme_color, theme))
+
 
          }
 

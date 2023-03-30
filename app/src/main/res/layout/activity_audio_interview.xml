@@ -21,9 +21,24 @@
     </androidx.camera.view.PreviewView>
 
     <TextView
+        android:id="@+id/userMicStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="20dp"
+        android:fontFamily="@font/poppins"
+        android:text="Mic is Inactive"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
         android:id="@+id/interviewerThinking"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="24dp"
         android:layout_marginBottom="18dp"
         android:fontFamily="@font/poppins"
         android:text="Interviewer is Talking..."
@@ -32,10 +47,10 @@
         android:visibility="visible"
         app:layout_constraintBottom_toTopOf="@+id/viewFinder"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintHorizontal_bias="0.895"
+        app:layout_constraintStart_toEndOf="@+id/userMicStatus"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
+        app:layout_constraintVertical_bias="0.922" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/audio_capture_button"
@@ -55,8 +70,8 @@
         app:layout_constraintTop_toTopOf="@+id/viewFinder" />
 
     <ScrollView
-        android:layout_width="wrap_content"
-        android:layout_height="247dp"
+        android:layout_width="348dp"
+        android:layout_height="212dp"
         android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -65,7 +80,7 @@
         <TextView
             android:id="@+id/interviewHistoryText"
             android:layout_width="347dp"
-            android:layout_height="247dp"
+            android:layout_height="wrap_content"
             android:fontFamily="@font/poppins_light"
             android:gravity="top|center"
             android:scrollbars="vertical"
@@ -78,9 +93,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="13dp"
+        android:fontFamily="@font/poppins_light"
         android:text="@string/interview_history"
         android:textColor="@color/white"
-        android:fontFamily="@font/poppins_light"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"

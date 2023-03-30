@@ -116,7 +116,10 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
     private fun recordUserAudio() {
         try {
             if(state){
-                Log.d("cellphone", "onCreate: Should BE STOPPING")
+                Log.d("cellphone", "onCreate: Mic Should BE STOPPING")
+                runOnUiThread{
+                    viewBinding.userMicStatus.text = "Mic is Inactive"
+                }
                 mediaRecorder?.stop()
                 mediaRecorder?.release()
                 state = false
@@ -126,6 +129,9 @@ class AudioInterviewActivity : AppCompatActivity(), TextToSpeech.OnInitListener 
                     convertSpeechToText()
                 }
             }else{
+                runOnUiThread{
+                    viewBinding.userMicStatus.text = "Mic is Active"
+                }
                 if (Build.VERSION.SDK_INT >= 31) {
                     Log.d("VERSION", "greater than 31")
                     mediaRecorder = MediaRecorder(this)

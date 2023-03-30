@@ -8,5 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="dark_mode_black">#1D1D1D</color>
+    <color name="purple_theme_color">#9B93FF</color>
 
 </resources>
