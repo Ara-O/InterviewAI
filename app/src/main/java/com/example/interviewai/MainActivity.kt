@@ -41,6 +41,7 @@ import com.aallam.openai.api.file.FileSource
 import com.aallam.openai.api.model.ModelId
 import com.aallam.openai.client.Chat
 import com.aallam.openai.client.OpenAI
+import com.example.interviewai.databinding.ActivityAudioInterviewBinding
 import com.example.interviewai.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,8 +61,14 @@ typealias LumaListener = (luma: Double) -> Unit
 
 
 class MainActivity : AppCompatActivity(){
-    private lateinit var viewBinding: ActivityMainBinding
 
+
+    private var mediaRecorder: MediaRecorder? = null
+    private var state: Boolean = false
+    private lateinit var viewBinding: ActivityMainBinding
+    private var mediaFile: File? = null
+    @OptIn(BetaOpenAI::class)
+    private var recordingStopped: Boolean = false
     @OptIn(BetaOpenAI::class)
     private var chatHistory = mutableListOf<ChatMessage>()
     @OptIn(BetaOpenAI::class)
@@ -136,10 +143,89 @@ class MainActivity : AppCompatActivity(){
             startInterview()
         }
 
+
+        viewBinding.microphoneButton.setOnClickListener {
+            lifecycleScope.launch{
+            recordUserAudio()
+            }
+        }
         recyclerView.itemAnimator = FadeInItemAnimator()
         setContentView(viewBinding.root)
     }
 
+
+    @OptIn(BetaOpenAI::class)
+    private suspend fun recordUserAudio() {
+        try {
+            if(state){
+                mediaRecorder?.stop()
+                mediaRecorder?.release()
+                state = false
+                Toast.makeText(this, "Recording stopped!", Toast.LENGTH_SHORT).show()
+                val openAI = OpenAI(BuildConfig.API_KEY)
+
+                val request = TranscriptionRequest(
+                    audio = FileSource(mediaFile?.absolutePath?.toPath()!!, fileSystem = FileSystem.SYSTEM),
+                    model = ModelId("whisper-1"),
+                )
+
+                Toast.makeText(applicationContext, "Loading...Please wait", Toast.LENGTH_SHORT).show()
+                val transcription = openAI.transcription(request)
+
+
+                Log.d("AUDIO FILE HERe", transcription.text)
+                viewBinding.userResponseText.append(transcription.text)
+
+            }else{
+                if (Build.VERSION.SDK_INT >= 31) {
+                    Log.d("VERSION", "greater than 31")
+                    mediaRecorder = MediaRecorder(this)
+                } else {
+                    Log.d("VERSION", "less than 31")
+                    mediaRecorder = MediaRecorder()
+                }
+                Log.d("cellphone", "onCreate: Should BE STARTIG")
+                mediaRecorder!!.setAudioSource(MediaRecorder.AudioSource.MIC)
+                mediaRecorder!!.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                mediaRecorder!!.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+
+                val internalStorageDir = filesDir
+                val timeStamp: String = android.icu.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+//            mediaFile =   File(mediaStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
+                mediaFile =
+                    File(internalStorageDir.path + File.separator + "AUD_" + timeStamp + ".m4a")
+                val fileOutputStream = FileOutputStream(mediaFile)
+                mediaRecorder!!.setOutputFile(fileOutputStream.fd)
+
+                mediaRecorder!!.prepare()
+                mediaRecorder!!.start()
+
+                state = true
+                Toast.makeText(this, "Recording started!", Toast.LENGTH_SHORT).show()
+            }
+        }catch (e: IllegalStateException) {
+            e.printStackTrace()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
+
+    companion object {
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf (
+                android.Manifest.permission.RECORD_AUDIO
+            ).apply {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
+    }
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(
+            baseContext, it) == PackageManager.PERMISSION_GRANTED
+    }
 
 
     @OptIn(BetaOpenAI::class)
@@ -165,9 +251,8 @@ class MainActivity : AppCompatActivity(){
                 content = interviewersResponse
             ))
             itemAdapter.notifyDataSetChanged()
-//            speakAIResponse(interviewersResponse)
-        }
 
+        }
 
         }
 
